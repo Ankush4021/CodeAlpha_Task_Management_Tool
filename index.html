@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Task Management Tool</title>
+  <style>
+    :root {
+      --bg: #0f1724;
+      --card: #152238;
+      --muted: #94a3b8;
+      --accent: #00c4ff;
+      --list-bg: #1c2b45;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    body {
+      font-family: Inter, system-ui, Arial;
+      background: linear-gradient(135deg, #0a0f1c 0%, #1c2b45 100%);
+      color: #e6eef6;
+      min-height: 100vh;
+      padding: 20px;
+      overflow-x: hidden
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    header h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 1px
+    }
+
+    .controls {
+      margin-left: auto;
+      display: flex;
+      gap: 8px
+    }
+
+    button {
+      cursor: pointer;
+      border: 0;
+      background: var(--accent);
+      color: #04121d;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-weight: 600;
+      transition: all 0.2s ease
+    }
+
+    button:hover {
+      background: #19d2ff;
+      transform: scale(1.05)
+    }
+
+    button.ghost {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid rgba(255, 255, 255, 0.2)
+    }
+
+    button.ghost:hover {
+      background: rgba(255, 255, 255, 0.05)
+    }
+
+    .board {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+      overflow-x: auto;
+      padding-bottom: 24px;
+      scrollbar-width: thin
+    }
+
+    .board::-webkit-scrollbar {
+      height: 8px
+    }
+
+    .board::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 4px
+    }
+
+    .list {
+      width: 300px;
+      background: var(--list-bg);
+      padding: 14px;
+      border-radius: 14px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      flex-shrink: 0;
+      animation: fadeIn 0.5s ease
+    }
+
+    .list h3 {
+      margin: 0 0 10px 0;
+      font-size: 16px;
+      font-weight: 600;
+      color: #fff
+    }
+
+    .list .list-head {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px
+    }
+
+    .list .list-actions {
+      margin-left: auto;
+      display: flex;
+      gap: 6px
+    }
+
+    .add-list {
+      min-width: 280px;
+      padding: 14px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px dashed rgba(255, 255, 255, 0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      backdrop-filter: blur(6px)
+    }
+
+    .card {
+      background: var(--card);
+      padding: 10px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      cursor: grab;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+      transition: transform 0.15s ease
+    }
+
+    .card:hover {
+      transform: scale(1.03)
+    }
+
+    .card.dragging {
+      opacity: 0.5;
+      transform: scale(0.95)
+    }
+
+    .card .meta {
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center
+    }
+
+    .card .title {
+      margin: 6px 0;
+      font-size: 14px;
+      font-weight: 500;
+      word-break: break-word
+    }
+
+    .drop-target {
+      min-height: 40px;
+      padding: 6px;
+      border-radius: 6px;
+      transition: background 0.2s ease
+    }
+
+    .drop-target.drag-over {
+      background: rgba(255, 255, 255, 0.08)
+    }
+
+    .list input,
+    .add-list input {
+      width: 100%;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+      outline: none;
+      transition: border 0.2s
+    }
+
+    .list input:focus,
+    .add-list input:focus {
+      border: 1px solid var(--accent)
+    }
+
+    .small {
+      font-size: 12px;
+      color: var(--muted)
+    }
+
+    .muted {
+      color: var(--muted)
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0)
+      }
+    }
+
+    @media (max-width:640px) {
+      .list {
+        width: 85%;
+        min-width: 260px
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>⚡ My Board</h1>
+    <div class="controls">
+      <button id="addSample">Add Sample</button>
+      <button id="clearAll" class="ghost">Clear All</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="board" class="board"></div>
+
+    <div class="add-list">
+      <input id="newListTitle" placeholder="+ New list title (eg. To Do)" />
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button id="createList">Create List</button>
+        <button id="saveBtn" class="ghost">Save</button>
+      </div>
+      <p class="small muted">💡 Drag cards between lists. Data auto-saves in your browser.</p>
+    </div>
+  </main>
+
+  <script>
+    const boardEl = document.getElementById('board');
+    const newListTitle = document.getElementById('newListTitle');
+    const createListBtn = document.getElementById('createList');
+    const saveBtn = document.getElementById('saveBtn');
+    const addSample = document.getElementById('addSample');
+    const clearAll = document.getElementById('clearAll');
+
+    let data = load();
+    let dragCard = null;
+
+    function uid(prefix = 'id') { return prefix + Math.random().toString(36).slice(2, 9) }
+
+    function save() {
+      localStorage.setItem('miniTrelloData', JSON.stringify(data));
+      saveBtn.textContent = 'Saved ✓';
+      setTimeout(() => saveBtn.textContent = 'Save', 1000);
+    }
+    function load() {
+      try {
+        const raw = localStorage.getItem('miniTrelloData');
+        if (raw) return JSON.parse(raw);
+      } catch (e) { }
+      return [];
+    }
+
+    function render() {
+      boardEl.innerHTML = '';
+      data.forEach(list => boardEl.appendChild(renderList(list)));
+    }
+
+    function renderList(list) {
+      const el = document.createElement('div'); el.className = 'list'; el.dataset.listId = list.id;
+
+      const head = document.createElement('div'); head.className = 'list-head';
+      const h3 = document.createElement('h3'); h3.textContent = list.title; head.appendChild(h3);
+      const actions = document.createElement('div'); actions.className = 'list-actions';
+      const addCardBtn = document.createElement('button'); addCardBtn.textContent = '+'; addCardBtn.title = 'Add card';
+      addCardBtn.addEventListener('click', () => addCardToList(list.id));
+      const delListBtn = document.createElement('button'); delListBtn.textContent = '🗑'; delListBtn.title = 'Delete list'; delListBtn.className = 'ghost';
+      delListBtn.addEventListener('click', () => { if (confirm('Delete this list?')) { data = data.filter(l => l.id !== list.id); save(); render(); } });
+      actions.appendChild(addCardBtn); actions.appendChild(delListBtn);
+      head.appendChild(actions);
+      el.appendChild(head);
+
+      const cardsWrap = document.createElement('div'); cardsWrap.className = 'drop-target';
+      cardsWrap.addEventListener('dragover', e => { e.preventDefault(); cardsWrap.classList.add('drag-over'); });
+      cardsWrap.addEventListener('dragleave', () => cardsWrap.classList.remove('drag-over'));
+      cardsWrap.addEventListener('drop', e => { e.preventDefault(); cardsWrap.classList.remove('drag-over'); if (dragCard) { moveCardToList(dragCard.cardId, dragCard.fromListId, list.id); } });
+
+      list.cards.forEach(card => cardsWrap.appendChild(renderCard(card, list.id)));
+
+      el.appendChild(cardsWrap);
+      return el;
+    }
+
+    function renderCard(card, listId) {
+      const c = document.createElement('div'); c.className = 'card'; c.draggable = true; c.dataset.cardId = card.id; c.dataset.listId = listId;
+      c.addEventListener('dragstart', () => { c.classList.add('dragging'); dragCard = { cardId: card.id, fromListId: listId }; });
+      c.addEventListener('dragend', () => { c.classList.remove('dragging'); dragCard = null; });
+
+      const title = document.createElement('div'); title.className = 'title'; title.textContent = card.title;
+      title.addEventListener('dblclick', () => { const t = prompt('Edit card title', card.title); if (t !== null) { card.title = t.trim() || 'Untitled'; save(); render(); } });
+
+      const meta = document.createElement('div'); meta.className = 'meta';
+      const small = document.createElement('div'); small.className = 'small muted'; small.textContent = card.id.slice(-4);
+      const del = document.createElement('button'); del.textContent = '✖'; del.className = 'ghost'; del.title = 'Delete card'; del.addEventListener('click', () => { if (confirm('Delete this card?')) removeCard(listId, card.id); });
+      meta.appendChild(small); meta.appendChild(del);
+
+      c.appendChild(title); c.appendChild(meta);
+      return c;
+    }
+
+    function addCardToList(listId) {
+      const text = prompt('Card title');
+      if (!text) return;
+      const list = data.find(l => l.id === listId);
+      list.cards.unshift({ id: uid('c_'), title: text });
+      save(); render();
+    }
+
+    function removeCard(listId, cardId) {
+      const list = data.find(l => l.id === listId);
+      if (!list) return;
+      list.cards = list.cards.filter(c => c.id !== cardId);
+      save(); render();
+    }
+
+    function moveCardToList(cardId, fromListId, toListId) {
+      if (!fromListId || !toListId || fromListId === toListId) return;
+      const from = data.find(l => l.id === fromListId);
+      const to = data.find(l => l.id === toListId);
+      if (!from || !to) return;
+      const idx = from.cards.findIndex(c => c.id === cardId);
+      if (idx === -1) return;
+      const [card] = from.cards.splice(idx, 1);
+      to.cards.unshift(card);
+      save(); render();
+    }
+
+    createListBtn.addEventListener('click', () => {
+      const title = newListTitle.value.trim();
+      if (!title) { alert('Enter list title'); return; }
+      const newList = { id: uid('l_'), title, cards: [] };
+      data.push(newList);
+      newListTitle.value = '';
+      save(); render();
+    });
+
+    saveBtn.addEventListener('click', save);
+
+    addSample.addEventListener('click', () => {
+      if (data.length && !confirm('Add sample lists on top of existing?')) return;
+      data = [
+        { id: uid('l_'), title: 'To Do', cards: [{ id: uid('c_'), title: 'Buy groceries' }, { id: uid('c_'), title: 'Study JS' }] },
+        { id: uid('l_'), title: 'In Progress', cards: [{ id: uid('c_'), title: 'Build UI' }] },
+        { id: uid('l_'), title: 'Done', cards: [{ id: uid('c_'), title: 'Idea' }] }
+      ];
+      save(); render();
+    });
+
+    clearAll.addEventListener('click', () => { if (confirm('Remove all lists and cards?')) { data = []; save(); render(); } });
+
+    render();
+  </script>
+</body>
+
+</html>
